@@ -144,13 +144,21 @@ public class ConnectTokenEnhancer implements TokenEnhancer {
 				idClaims.setCustomClaim("nonce", nonce);
 			}
 
+			//Calculate token hash (at_hash)
 			String responseType = authentication.getAuthorizationRequest().getAuthorizationParameters().get("response_type");
 			Set<String> responseTypes = OAuth2Utils.parseParameterList(responseType);
 			if (responseTypes.contains("token")) {
-				// calculate the token hash
-				Base64URL at_hash = JWSUtils.getAccessTokenHash(signingAlg, token.getJwt().serialize().getBytes());
+				Base64URL at_hash = JWSUtils.getAccessTokenHash(signingAlg, token);
 				//TODO: What should happen if the hash cannot be calculated?
 				idClaims.setClaim("at_hash", at_hash);
+			}
+			
+			//Calculate code hash (c_hash)
+			if (responseTypes.contains("code")) {
+				String code = authentication.getAuthorizationRequest().getAuthorizationParameters().get("code");
+				Base64URL c_hash = JWSUtils.getCodeHash(signingAlg, code);
+				//TODO: What should happen if the hash cannot be calculated?
+				idClaims.setClaim("c_hash", c_hash);
 			}
 
 			SignedJWT idToken = new SignedJWT(new JWSHeader(signingAlg), idClaims);
